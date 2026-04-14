@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: citibike-map
+    runtime: node
+    plan: free
+    buildCommand: npm ci --omit=dev
+    startCommand: node server.js
+    envVars:
+      - key: PORT
+        value: 10000
+      - key: NODE_ENV
+        value: production
+    disk:
+      name: citibike-data
+      mountPath: /data
+      sizeGB: 1
