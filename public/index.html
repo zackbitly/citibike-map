@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NYC Citibike Availability Map</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/css/styles.css" />
+</head>
+<body>
+  <div id="app">
+    <!-- Sidebar -->
+    <aside id="sidebar">
+      <div id="sidebar-header">
+        <div id="brand">
+          <svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="14" cy="14" r="13" fill="#0066FF" stroke="white" stroke-width="1.5"/>
+            <circle cx="9" cy="18" r="3" fill="white"/>
+            <circle cx="19" cy="18" r="3" fill="white"/>
+            <path d="M9 18 L13 10 L19 18" stroke="white" stroke-width="2" stroke-linejoin="round" fill="none"/>
+            <circle cx="13" cy="10" r="1.5" fill="white"/>
+          </svg>
+          <span>Citibike Map</span>
+        </div>
+      </div>
+
+      <!-- Search -->
+      <div id="search-wrapper">
+        <div id="search-box">
+          <svg id="search-icon" width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <circle cx="6.5" cy="6.5" r="5" stroke="#94A3B8" stroke-width="1.5"/>
+            <path d="M10 10L14 14" stroke="#94A3B8" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
+          <input id="search-input" type="text" placeholder="Search stations..." autocomplete="off" />
+          <button id="search-clear" aria-label="Clear search">✕</button>
+        </div>
+        <div id="search-results"></div>
+      </div>
+
+      <!-- Mode Toggle -->
+      <div id="mode-section">
+        <div id="mode-toggle">
+          <button id="btn-live" class="mode-btn active" data-mode="live">
+            <span class="mode-dot live-dot"></span>
+            Live
+          </button>
+          <button id="btn-historical" class="mode-btn" data-mode="historical">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+              <circle cx="7" cy="7" r="6" stroke="currentColor" stroke-width="1.5"/>
+              <path d="M7 4V7L9 9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+            </svg>
+            Historical Avg
+          </button>
+        </div>
+      </div>
+
+      <!-- Historical Controls -->
+      <div id="historical-controls" class="hidden">
+        <div class="control-section">
+          <label class="control-label">Day of Week</label>
+          <div id="day-buttons">
+            <button class="day-btn" data-day="0">Sun</button>
+            <button class="day-btn" data-day="1">Mon</button>
+            <button class="day-btn" data-day="2">Tue</button>
+            <button class="day-btn" data-day="3">Wed</button>
+            <button class="day-btn" data-day="4">Thu</button>
+            <button class="day-btn" data-day="5">Fri</button>
+            <button class="day-btn" data-day="6">Sat</button>
+          </div>
+        </div>
+
+        <div class="control-section">
+          <div class="control-label-row">
+            <label class="control-label">Time of Day</label>
+            <span id="time-display" class="time-display">8:00 AM</span>
+          </div>
+          <input type="range" id="time-slider" min="0" max="23" value="8" step="1" />
+          <div id="time-ticks">
+            <span>12a</span><span>6a</span><span>12p</span><span>6p</span><span>11p</span>
+          </div>
+        </div>
+
+        <div id="data-quality" class="hidden">
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+            <circle cx="6" cy="6" r="5" stroke="#F59E0B" stroke-width="1.2"/>
+            <path d="M6 3.5V6.5" stroke="#F59E0B" stroke-width="1.2" stroke-linecap="round"/>
+            <circle cx="6" cy="8.5" r="0.6" fill="#F59E0B"/>
+          </svg>
+          <span id="data-quality-msg"></span>
+        </div>
+      </div>
+
+      <!-- Legend -->
+      <div id="legend">
+        <span class="legend-title">Bikes available</span>
+        <div class="legend-scale">
+          <div class="legend-bar"></div>
+          <div class="legend-labels">
+            <span>0</span>
+            <span>25%</span>
+            <span>50%</span>
+            <span>75%</span>
+            <span>Full</span>
+          </div>
+        </div>
+        <div class="legend-extra">
+          <span class="legend-dot gray-dot"></span><span>Inactive station</span>
+        </div>
+      </div>
+
+      <!-- Station Detail Panel -->
+      <div id="station-panel" class="hidden">
+        <div id="station-panel-header">
+          <div id="station-name-wrap">
+            <div id="station-dot"></div>
+            <h3 id="station-name"></h3>
+          </div>
+          <button id="station-close" aria-label="Close">✕</button>
+        </div>
+
+        <div id="station-stats">
+          <div class="stat-card">
+            <div class="stat-value" id="stat-bikes">–</div>
+            <div class="stat-label">Bikes</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="stat-ebikes">–</div>
+            <div class="stat-label">E-Bikes</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="stat-docks">–</div>
+            <div class="stat-label">Docks</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="stat-capacity">–</div>
+            <div class="stat-label">Capacity</div>
+          </div>
+        </div>
+
+        <!-- Live vs Avg comparison (shown in historical mode) -->
+        <div id="comparison-row" class="hidden">
+          <div class="comparison-item">
+            <span class="comp-label">Live now</span>
+            <span class="comp-value" id="comp-live">–</span>
+          </div>
+          <div class="comparison-divider">vs</div>
+          <div class="comparison-item">
+            <span class="comp-label">Avg this time</span>
+            <span class="comp-value" id="comp-avg">–</span>
+          </div>
+        </div>
+
+        <!-- Mini hourly chart for the day -->
+        <div id="hourly-chart-wrap">
+          <div class="chart-title" id="chart-day-label">Today's average pattern</div>
+          <canvas id="hourly-chart" width="240" height="80"></canvas>
+        </div>
+
+        <div id="station-meta">
+          <span id="station-id-label"></span>
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div id="sidebar-footer">
+        <div id="data-status">
+          <span class="status-dot" id="status-dot"></span>
+          <span id="status-text">Loading...</span>
+        </div>
+        <div id="snapshot-info" class="hidden">
+          <span id="snapshot-count"></span>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Map -->
+    <div id="map-container">
+      <div id="map"></div>
+
+      <!-- Floating refresh button -->
+      <button id="btn-refresh" title="Refresh live data">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+          <path d="M2 8C2 4.686 4.686 2 8 2c2.035 0 3.847.961 5 2.45" stroke="white" stroke-width="1.8" stroke-linecap="round"/>
+          <path d="M14 8c0 3.314-2.686 6-6 6-2.035 0-3.847-.961-5-2.45" stroke="white" stroke-width="1.8" stroke-linecap="round"/>
+          <path d="M13 2.5L13.5 5H11" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M3 13.5L2.5 11H5" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+
+      <!-- Loading overlay -->
+      <div id="map-loading">
+        <div class="spinner"></div>
+        <span>Loading stations...</span>
+      </div>
+
+      <!-- Station count badge -->
+      <div id="station-count-badge" class="hidden"></div>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="/js/app.js"></script>
+</body>
+</html>
